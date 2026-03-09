@@ -12,14 +12,14 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-// app.use('/api/auth', require('./routes/auth'));
-// app.use('/api/classes', require('./routes/classes'));
-// app.use('/api/quizzes', require('./routes/quizzes'));
-// app.use('/api/assignments', require('./routes/assignments'));
-// app.use('/api/submissions', require('./routes/submissions'));
-// app.use('/api/lab-tasks', require('./routes/labTasks'));
-// app.use('/api/lab-submissions', require('./routes/labSubmissions'));
-// app.use('/uploads', express.static('uploads'));
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/classes', require('./routes/classes'));
+app.use('/api/quizzes', require('./routes/quizzes'));
+app.use('/api/assignments', require('./routes/assignments'));
+app.use('/api/submissions', require('./routes/submissions'));
+app.use('/api/lab-tasks', require('./routes/labTasks'));
+app.use('/api/lab-submissions', require('./routes/labSubmissions'));
+app.use('/uploads', express.static('uploads'));
 
 // Basic Route
 app.get('/', (req, res) => {
