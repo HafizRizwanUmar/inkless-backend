@@ -12,7 +12,17 @@ try {
     app = express();
     const PORT = process.env.PORT || 5000;
 
-    app.use(cors());
+    app.use(cors({
+        origin: [
+            'https://inkless.minderfly.com',
+            'http://localhost:3000',
+            'http://localhost:5173',
+            'https://inkless-fyp.vercel.app' // Optional fallback
+        ],
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'Accept'],
+        credentials: true
+    }));
     app.use(express.json());
 
     // Routes
