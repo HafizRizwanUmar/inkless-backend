@@ -43,7 +43,7 @@ try {
     // Database Connection
     const mongoURI = process.env.MONGO_URI;
     if (mongoURI) {
-        mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
+        mongoose.connect(mongoURI)
             .then(() => console.log('MongoDB connected'))
             .catch((err) => console.error('MongoDB connection error:', err));
     } else {
