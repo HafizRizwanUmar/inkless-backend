@@ -19,7 +19,7 @@ try {
 
 const app = express();
 
-app.all('*', (req, res) => {
+app.use((req, res) => {
     if (startupError) {
         return res.status(500).json({
             error: "Vercel Cold Start Error Caught",

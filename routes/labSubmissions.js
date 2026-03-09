@@ -20,7 +20,7 @@ const auth = (req, res, next) => {
 };
 
 const storage = multer.diskStorage({
-    destination: './uploads/',
+    destination: '/tmp',
     filename: function (req, file, cb) {
         cb(null, 'LABSUB-' + Date.now() + path.extname(file.originalname));
     }

@@ -22,7 +22,7 @@ const auth = (req, res, next) => {
 
 // Multer Storage Configuration
 const storage = multer.diskStorage({
-    destination: './uploads/',
+    destination: '/tmp',
     filename: function (req, file, cb) {
         cb(null, 'ASSIGN-' + Date.now() + path.extname(file.originalname));
     }

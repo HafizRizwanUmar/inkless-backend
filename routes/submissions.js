@@ -23,7 +23,7 @@ const auth = (req, res, next) => {
 
 // Multer Config for Images (if image submission enabled)
 const storage = multer.diskStorage({
-    destination: './uploads/',
+    destination: '/tmp',
     filename: function (req, file, cb) {
         cb(null, 'SUB-' + Date.now() + path.extname(file.originalname));
     }
