@@ -36,7 +36,7 @@ if (mongoURI) {
     console.error('FATAL ERROR: MONGO_URI is not defined.');
 }
 
-if (process.env.NODE_ENV !== 'production') {
+if (require.main === module) {
     app.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}`);
     });
