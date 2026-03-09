@@ -27,9 +27,14 @@ app.get('/', (req, res) => {
 });
 
 // Database Connection
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('MongoDB connected'))
-    .catch((err) => console.error('MongoDB connection error:', err));
+const mongoURI = process.env.MONGO_URI;
+if (mongoURI) {
+    mongoose.connect(mongoURI)
+        .then(() => console.log('MongoDB connected'))
+        .catch((err) => console.error('MongoDB connection error:', err));
+} else {
+    console.error('FATAL ERROR: MONGO_URI is not defined.');
+}
 
 if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => {
