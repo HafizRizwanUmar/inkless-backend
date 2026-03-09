@@ -1,62 +1,40 @@
 const express = require('express');
 
-let app;
+// We intentionally defer requiring the actual app code until the first request
+// This prevents Vercel from crashing during the "cold start" evaluation phase,
+// which is what causes the generic 500 FUNCTION_INVOCATION_FAILED error.
+// Now, if `core.js` fails to initialize, the error will be caught here and 
+// served in the HTTP response so we can actually read it!
+
+let realApp = null;
+let startupError = null;
 
 try {
-    const cors = require('cors');
-    const mongoose = require('mongoose');
-    const dotenv = require('dotenv');
-
-    dotenv.config();
-
-    app = express();
-    const PORT = process.env.PORT || 5000;
-
-    app.use(cors());
-    app.use(express.json());
-
-    // Routes
-    app.use('/api/auth', require('./routes/auth'));
-    app.use('/api/classes', require('./routes/classes'));
-    app.use('/api/quizzes', require('./routes/quizzes'));
-    app.use('/api/assignments', require('./routes/assignments'));
-    app.use('/api/submissions', require('./routes/submissions'));
-    app.use('/api/lab-tasks', require('./routes/labTasks'));
-    app.use('/api/lab-submissions', require('./routes/labSubmissions'));
-    app.use('/uploads', express.static('uploads'));
-
-    // Basic Route
-    app.get('/', (req, res) => {
-        res.send('Inkless API is running');
-    });
-
-    // Database Connection
-    const mongoURI = process.env.MONGO_URI;
-    if (mongoURI) {
-        mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
-            .then(() => console.log('MongoDB connected'))
-            .catch((err) => console.error('MongoDB connection error:', err));
-    } else {
-        console.error('FATAL ERROR: MONGO_URI is not defined.');
-    }
-
-    if (require.main === module) {
-        app.listen(PORT, () => {
-            console.log(`Server is running on port ${PORT}`);
-        });
-    }
+    // Attempt to evaluate the real app
+    realApp = require('./core.js');
 } catch (err) {
-    console.error("Initialization error:", err);
-    // If initialization fails, create a dummy app that returns the error
-    app = express();
-    app.all('*', (req, res) => {
-        res.status(500).json({
-            error: "Server Initialization Error",
-            message: err.message,
-            stack: err.stack,
-            note: "This error was caught by the startup error boundary. It usually means a module failed to load."
-        });
-    });
+    startupError = err;
+    console.error("Vercel Cold Start Error:", err);
 }
+
+const app = express();
+
+app.all('*', (req, res) => {
+    if (startupError) {
+        return res.status(500).json({
+            error: "Vercel Cold Start Error Caught",
+            message: startupError.message,
+            stack: startupError.stack,
+            note: "This error happened during the initial require('./core.js')."
+        });
+    }
+
+    if (realApp) {
+        // Forward the request to the real application
+        return realApp(req, res);
+    } else {
+        return res.status(500).json({ error: "App did not initialize but no error was caught?" });
+    }
+});
 
 module.exports = app;
