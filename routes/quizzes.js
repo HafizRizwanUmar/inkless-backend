@@ -146,19 +146,6 @@ router.get('/class/:classId', auth, async (req, res) => {
     }
 });
 
-// @route   GET api/quizzes/:id
-// @desc    Get quiz by ID
-// @access  Private
-router.get('/:id', auth, async (req, res) => {
-    try {
-        const quiz = await Quiz.findById(req.params.id);
-        if (!quiz) return res.status(404).json({ msg: 'Quiz not found' });
-        res.json(quiz);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
-    }
-});
 
 // @route   POST api/quizzes/attempt
 // @desc    Submit a quiz attempt
@@ -258,6 +245,34 @@ router.get('/submissions/:quizId', auth, async (req, res) => {
 
         const attempts = await QuizAttempt.find({ quiz: req.params.quizId }).populate('student', 'name email');
         res.json({ quiz, attempts });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   GET api/quizzes/ai-status
+// @desc    Check AI Availability
+// @access  Private (Teacher)
+router.get('/ai-status', auth, async (req, res) => {
+    try {
+        if (!process.env.GEMINI_API_KEY) {
+            return res.json({ available: false, msg: 'API Key missing' });
+        }
+        res.json({ available: true, msg: 'Gemini 1.5 Flash' });
+    } catch (err) {
+        res.json({ available: false, msg: err.message });
+    }
+});
+
+// @route   GET api/quizzes/:id
+// @desc    Get quiz by ID
+// @access  Private
+router.get('/:id', auth, async (req, res) => {
+    try {
+        const quiz = await Quiz.findById(req.params.id);
+        if (!quiz) return res.status(404).json({ msg: 'Quiz not found' });
+        res.json(quiz);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -445,19 +460,6 @@ router.get('/export/pdf-zip/:quizId', auth, async (req, res) => {
     }
 });
 
-// @route   GET api/quizzes/ai-status
-// @desc    Check AI Availability
-// @access  Private (Teacher)
-router.get('/ai-status', auth, async (req, res) => {
-    try {
-        if (!process.env.GEMINI_API_KEY) {
-            return res.json({ available: false, msg: 'API Key missing' });
-        }
-        res.json({ available: true, msg: 'Gemini 1.5 Flash' });
-    } catch (err) {
-        res.json({ available: false, msg: err.message });
-    }
-});
 
 // @route   POST api/quizzes/grade-all/:quizId
 // @desc    Grade all text-based submissions for a quiz using AI
