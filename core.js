@@ -30,7 +30,7 @@ try {
         allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'Accept'],
         credentials: true
     }));
-    app.options('*', cors()); // Enable pre-flight for all routes
+    app.options('(.*)', cors()); // Enable pre-flight for all routes
     app.use(express.json());
 
     // Routes
@@ -60,6 +60,7 @@ try {
     }
 
     if (require.main === module) {
+        const PORT = process.env.PORT || 5015;
         app.listen(PORT, () => {
             console.log(`Server is running on port ${PORT}`);
         });
@@ -68,7 +69,7 @@ try {
     console.error("Initialization error:", err);
     // If initialization fails, create a dummy app that returns the error
     app = express();
-    app.all('*', (req, res) => {
+    app.all('(.*)', (req, res) => {
         res.status(500).json({
             error: "Server Initialization Error",
             message: err.message,
