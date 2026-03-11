@@ -70,7 +70,7 @@ router.get('/', auth, async (req, res) => {
 
         res.json(classes);
     } catch (err) {
-        console.error("Get Classes Error:", err.message);
+        console.error("Get Classes Error:", err);
         res.status(500).json({ msg: 'Server Error', error: err.message });
     }
 });
@@ -158,8 +158,8 @@ router.get('/:id/analytics', auth, async (req, res) => {
             let totalAssigMarks = 0;
             let earnedAssigMarks = 0;
             studentAssignments.forEach(sub => {
-                if (sub.status === 'graded' && sub.marks !== undefined) {
-                    earnedAssigMarks += sub.marks;
+                if (sub.status === 'graded' && sub.obtainedMarks !== undefined) {
+                    earnedAssigMarks += sub.obtainedMarks;
                 }
             });
 
