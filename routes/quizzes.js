@@ -13,7 +13,7 @@ const getGeminiModel = () => {
     }
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     // Use gemini-1.5-flash for general text tasks
-    return genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    return genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 };
 
@@ -179,10 +179,8 @@ router.post('/attempt', auth, async (req, res) => {
         let score = 0;
         let totalPoints = 0;
 
-        // Evaluate AI answers first if needed
-        const model = await (async () => {
-            try { return getGeminiModel(); } catch (e) { return null; }
-        })();
+        // Evaluation: Only MCQs are auto-graded on submission now.
+        // AI marking for SHORT/LONG is triggered later by the teacher.
 
         // Calculate score
         for (let index = 0; index < quiz.questions.length; index++) {
@@ -196,41 +194,8 @@ router.post('/attempt', auth, async (req, res) => {
                         score += question.points || 1;
                     }
                 } else if ((question.type === 'SHORT' || question.type === 'LONG') && studentAnswer.textAnswer) {
-                    if (model) {
-                        // Grade with AI
-                        try {
-                            const prompt = `
-Question: ${question.questionText}
-Max Points: ${question.points || 1}
-Student Answer: ${studentAnswer.textAnswer}
-
-Evaluate the student's answer. Return ONLY a valid JSON object (no markdown formatting) with:
-{
-  "score": <number between 0 and Max Points based on correctness>,
-  "feedback": "<1-2 sentences explaining why they got this score>"
-}
-`;
-                            const result = await model.generateContent(prompt);
-                            let aiResponseText = result.response.text().trim();
-
-                            // Remove markdown formatting
-                            if (aiResponseText.startsWith('```json')) {
-                                aiResponseText = aiResponseText.replace(/^```json/, '').replace(/```$/, '').trim();
-                            } else if (aiResponseText.startsWith('```')) {
-                                aiResponseText = aiResponseText.replace(/^```/, '').replace(/```$/, '').trim();
-                            }
-
-                            const aiGrading = JSON.parse(aiResponseText);
-                            const earned = parseInt(aiGrading.score, 10) || 0;
-                            score += earned;
-                            studentAnswer.aiFeedback = aiGrading.feedback;
-                        } catch (gradingErr) {
-                            console.error("AI Grading Error for question", index, ":", gradingErr.message);
-                            studentAnswer.aiFeedback = "Failed to evaluate with AI.";
-                        }
-                    } else {
-                        studentAnswer.aiFeedback = "AI grading unavailable. Needs manual review.";
-                    }
+                    // No AI marking on submission; mark as pending manual/AI review
+                    // studentAnswer.aiFeedback = "Pending review."; // Removed as per instruction
                 }
             }
         }
@@ -246,8 +211,12 @@ Evaluate the student's answer. Return ONLY a valid JSON object (no markdown form
             copyAttemptCount: req.body.copyAttemptCount || 0
         });
 
-        await attempt.save();
-        res.json(attempt);
+        const savedAttempt = await attempt.save();
+
+        res.json({
+            ...savedAttempt.toObject(),
+            resultsShared: quiz.resultsShared
+        });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -287,10 +256,7 @@ router.get('/submissions/:quizId', auth, async (req, res) => {
             return res.status(403).json({ msg: 'Not authorized' });
         }
 
-        const attempts = await QuizAttempt.find({ quiz: req.params.quizId })
-            .populate('student', 'name email')
-            .sort({ attemptedAt: -1 });
-
+        const attempts = await QuizAttempt.find({ quiz: req.params.quizId }).populate('student', 'name email');
         res.json({ quiz, attempts });
     } catch (err) {
         console.error(err.message);
@@ -479,4 +445,123 @@ router.get('/export/pdf-zip/:quizId', auth, async (req, res) => {
     }
 });
 
+// @route   GET api/quizzes/ai-status
+// @desc    Check AI Availability
+// @access  Private (Teacher)
+router.get('/ai-status', auth, async (req, res) => {
+    try {
+        if (!process.env.GEMINI_API_KEY) {
+            return res.json({ available: false, msg: 'API Key missing' });
+        }
+        res.json({ available: true, msg: 'Gemini 1.5 Flash' });
+    } catch (err) {
+        res.json({ available: false, msg: err.message });
+    }
+});
+
+// @route   POST api/quizzes/grade-all/:quizId
+// @desc    Grade all text-based submissions for a quiz using AI
+// @access  Private (Teacher)
+router.post('/grade-all/:quizId', auth, async (req, res) => {
+    try {
+        const quiz = await Quiz.findById(req.params.quizId);
+        if (!quiz) return res.status(404).json({ msg: 'Quiz not found' });
+
+        const model = getGeminiModel();
+        const attempts = await QuizAttempt.find({ quiz: req.params.quizId });
+
+        if (attempts.length === 0) return res.status(400).json({ msg: 'No attempts to grade.' });
+
+        let processedCount = 0;
+
+        for (let attempt of attempts) {
+            let totalNewScore = 0;
+            let updated = false;
+
+            for (let index = 0; index < quiz.questions.length; index++) {
+                const question = quiz.questions[index];
+                const studentAnswer = attempt.answers.find(a => a.questionIndex === index);
+                if (!studentAnswer) continue;
+
+                if (question.type === 'MCQ' || !question.type) {
+                    if (studentAnswer.selectedOptionIndex === question.correctOptionIndex) {
+                        totalNewScore += question.points || 1;
+                    }
+                } else if ((question.type === 'SHORT' || question.type === 'LONG') && studentAnswer.textAnswer) {
+                    try {
+                        const prompt = `
+Question: ${question.questionText}
+Max Points: ${question.points || 1}
+Student Answer: ${studentAnswer.textAnswer}
+
+Evaluate the student's answer. Return ONLY a valid JSON object (no markdown formatting) with:
+{
+  "score": <number between 0 and Max Points based on correctness>,
+  "feedback": "<1-2 sentences explaining why they got this score>"
+}
+`;
+                        const result = await model.generateContent(prompt);
+                        let aiResponseText = result.response.text().trim();
+                        if (aiResponseText.startsWith('```json')) aiResponseText = aiResponseText.replace(/^```json/, '').replace(/```$/, '').trim();
+                        else if (aiResponseText.startsWith('```')) aiResponseText = aiResponseText.replace(/^```/, '').replace(/```$/, '').trim();
+
+                        const aiGrading = JSON.parse(aiResponseText);
+                        studentAnswer.aiFeedback = aiGrading.feedback;
+                        totalNewScore += (parseInt(aiGrading.score, 10) || 0);
+                        updated = true;
+                    } catch (e) {
+                        console.error("AI Batch Grade Error:", e.message);
+                    }
+                }
+            }
+
+            if (updated) {
+                attempt.score = totalNewScore;
+                await attempt.save();
+                processedCount++;
+            }
+        }
+
+        res.json({ msg: `Successfully processed ${processedCount} attempts with AI.` });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   POST api/quizzes/share-results/:quizId
+// @desc    Toggle result visibility for students
+// @access  Private (Teacher)
+router.post('/share-results/:quizId', auth, async (req, res) => {
+    try {
+        const quiz = await Quiz.findById(req.params.quizId);
+        if (!quiz) return res.status(404).json({ msg: 'Quiz not found' });
+
+        quiz.resultsShared = true;
+        await quiz.save();
+
+        const Notification = require('../models/Notification');
+        const attempts = await QuizAttempt.find({ quiz: req.params.quizId });
+
+        const notifications = attempts.map(att => ({
+            recipient: att.student,
+            sender: req.user.id,
+            type: 'QUIZ',
+            title: 'Quiz Results Shared',
+            message: `Marks for "${quiz.title}" have been released by your teacher.`,
+            link: `/student/quiz-attempt`
+        }));
+
+        if (notifications.length > 0) {
+            await Notification.insertMany(notifications);
+        }
+
+        res.json({ msg: 'Results shared and notifications sent.' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 module.exports = router;
+

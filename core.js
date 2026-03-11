@@ -33,6 +33,7 @@ try {
     app.use('/api/submissions', require('./routes/submissions'));
     app.use('/api/lab-tasks', require('./routes/labTasks'));
     app.use('/api/lab-submissions', require('./routes/labSubmissions'));
+    app.use('/api/notifications', require('./routes/notifications'));
     app.use('/uploads', express.static('uploads'));
 
     // Basic Route
