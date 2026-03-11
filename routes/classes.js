@@ -70,8 +70,8 @@ router.get('/', auth, async (req, res) => {
 
         res.json(classes);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        console.error("Get Classes Error:", err.message);
+        res.status(500).json({ msg: 'Server Error', error: err.message });
     }
 });
 

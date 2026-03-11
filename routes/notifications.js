@@ -27,8 +27,8 @@ router.get('/', auth, async (req, res) => {
             .limit(50);
         res.json(notifications);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        console.error("Get Notifications Error:", err.message);
+        res.status(500).json({ msg: 'Server Error', error: err.message });
     }
 });
 
@@ -40,8 +40,8 @@ router.get('/unread-count', auth, async (req, res) => {
         const count = await Notification.countDocuments({ recipient: req.user.id, read: false });
         res.json({ count });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        console.error("Get Unread Count Error:", err.message);
+        res.status(500).json({ msg: 'Server Error', error: err.message });
     }
 });
 

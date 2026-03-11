@@ -574,8 +574,8 @@ router.get('/ai-status', auth, async (req, res) => {
         }
         res.json({ available: true, message: 'AI marking is available.' });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        console.error("Check AI Status Error:", err.message);
+        res.status(500).json({ msg: 'Server Error', error: err.message });
     }
 });
 
