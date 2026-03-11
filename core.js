@@ -12,16 +12,25 @@ try {
     app = express();
 
     app.use(cors({
-        origin: [
-            'https://inkless.minderfly.com',
-            'http://localhost:3000',
-            'http://localhost:5173',
-            'https://inkless-fyp.vercel.app' // Optional fallback
-        ],
+        origin: function (origin, callback) {
+            const allowedOrigins = [
+                'https://inkless.minderfly.com',
+                'http://localhost:3000',
+                'http://localhost:5173',
+                'https://inkless-fyp.vercel.app'
+            ];
+            if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+                callback(null, true);
+            } else {
+                console.log("CORS Blocked for origin:", origin);
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'Accept'],
         credentials: true
     }));
+    app.options('*', cors()); // Enable pre-flight for all routes
     app.use(express.json());
 
     // Routes

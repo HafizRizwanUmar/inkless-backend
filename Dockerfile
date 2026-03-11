@@ -14,7 +14,7 @@ RUN npm install --production
 COPY . .
 
 # Expose the port the app runs on
-EXPOSE 5000
+EXPOSE 5015
 
 # Start the server using the VPS entry point
 CMD [ "node", "server.js" ]
