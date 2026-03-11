@@ -67,6 +67,7 @@ router.post('/signup', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
+    console.log(`Login attempt for: ${email}`);
 
     try {
         let user = await User.findOne({ email });
