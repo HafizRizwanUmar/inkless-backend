@@ -563,21 +563,5 @@ router.post('/share-results/:quizId', auth, async (req, res) => {
     }
 });
 
-// @route   GET api/quizzes/ai-status
-// @desc    Check AI availability and status
-// @access  Private
-router.get('/ai-status', auth, async (req, res) => {
-    try {
-        const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) {
-            return res.json({ available: false, message: 'AI marking is currently unavailable (API key missing).' });
-        }
-        res.json({ available: true, message: 'AI marking is available.' });
-    } catch (err) {
-        console.error("Check AI Status Error:", err.message);
-        res.status(500).json({ msg: 'Server Error', error: err.message });
-    }
-});
-
 module.exports = router;
 
