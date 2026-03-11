@@ -30,7 +30,6 @@ try {
         allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'Accept'],
         credentials: true
     }));
-    app.options('(.*)', cors()); // Enable pre-flight for all routes
     app.use(express.json());
 
     // Routes
@@ -69,7 +68,7 @@ try {
     console.error("Initialization error:", err);
     // If initialization fails, create a dummy app that returns the error
     app = express();
-    app.all('(.*)', (req, res) => {
+    app.use((req, res) => {
         res.status(500).json({
             error: "Server Initialization Error",
             message: err.message,
